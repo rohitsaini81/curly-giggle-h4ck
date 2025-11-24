@@ -1,0 +1,99 @@
+from instagrapi import Client
+from getpass import getpass
+import os
+
+SESSION_FILE = "session.json"
+
+
+def login():
+    cl = Client()
+
+    # Load session if exists
+    if os.path.exists(SESSION_FILE):
+        try:
+            cl.load_settings(SESSION_FILE)
+            cl.get_timeline_feed()  # test session
+            print("[✓] Logged in using session.")
+            return cl
+        except Exception as e:
+            print("[!] Session invalid, logging in again.", e)
+
+    # Normal login
+    username = input("Enter Instagram username: ")
+    password = getpass("Enter password: ")
+
+    cl.login(username, password)
+    cl.dump_settings(SESSION_FILE)
+    print("[✓] New session saved.")
+    return cl
+
+
+
+
+def list_chats(cl):
+    print("\n=== Instagram DM Inbox ===\n")
+
+    threads = cl.direct_threads()
+
+    for i, t in enumerate(threads):
+        users = ", ".join([u.username for u in t.users])
+
+        # Extract last message safely
+        last_msg = None
+
+        # 1. Try last_permanent_item
+        if hasattr(t, "last_permanent_item") and t.last_permanent_item:
+            if hasattr(t.last_permanent_item, "text"):
+                last_msg = t.last_permanent_item.text
+
+        # 2. Try old .items list if available
+        if not last_msg and hasattr(t, "items") and t.items:
+            item = t.items[0]
+            if hasattr(item, "text"):
+                last_msg = item.text
+
+        # 3. Fallback
+        if not last_msg:
+            last_msg = "(no text)"
+
+        print(f"{i}. Users: {users}")
+        print(f"   Last: {last_msg}")
+        print("-" * 40)
+
+    return threads
+
+
+
+def send_message(cl, thread):
+    message = input("Enter message to send: ").strip()
+
+    # The correct working method
+    cl.direct_send(
+        message,
+        thread_ids=[thread.id],
+    )
+
+    print("\n[✓] Message sent successfully!")
+
+
+def main():
+    cl = login()
+    threads = list_chats(cl)
+
+    try:
+        choice = int(input("\nSelect chat number to send a message: "))
+    except:
+        print("Invalid input.")
+        return
+
+    if choice < 0 or choice >= len(threads):
+        print("Invalid thread number.")
+        return
+
+    selected_thread = threads[choice]
+    send_message(cl, selected_thread)
+
+
+if __name__ == "__main__":
+    main()
+

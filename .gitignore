@@ -1,0 +1,8 @@
+python/.env
+python/__pycache__
+python/session.json
+
+.env
+session.json
+node_modules
+bun.lock
