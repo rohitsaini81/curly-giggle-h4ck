@@ -12,16 +12,16 @@ items=  [
         ]
 
 
-@app.route("/", method=['GET'])
+@app.route("/", methods=['GET'])
 def test():
     return "hello"
 
-@app.route("/chats", method=['GET'])
+@app.route("/chats", methods=['GET'])
 def chats():
     return items
 
 
 
 
-if __main__ =='__main__':
+if __name__ =='__main__':
     app.run()
