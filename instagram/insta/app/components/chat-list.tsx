@@ -6,10 +6,11 @@ type Props = {
   chats: ChatSummary[];
   activeId: string;
   loading: boolean;
+  error: string;
   onSelect: (id: string) => void;
 };
 
-export function ChatList({ chats, activeId, loading, onSelect }: Props) {
+export function ChatList({ chats, activeId, loading, error, onSelect }: Props) {
   return (
     <aside className="flex h-full w-full shrink-0 flex-col border-r border-[#dbdbdb] bg-white md:w-[365px]">
       <header className="flex h-[74px] items-center justify-between px-6">
@@ -23,7 +24,11 @@ export function ChatList({ chats, activeId, loading, onSelect }: Props) {
       <div className="overflow-y-auto pb-4">
         {loading ? Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex gap-3 px-6 py-2.5"><div className="skeleton h-14 w-14 rounded-full bg-gray-200" /><div className="flex flex-1 flex-col justify-center gap-2"><div className="skeleton h-3 w-28 rounded bg-gray-200" /><div className="skeleton h-3 w-40 rounded bg-gray-100" /></div></div>
-        )) : chats.map((chat) => (
+        )) : error && chats.length === 0 ? (
+          <p className="px-6 py-8 text-sm text-red-600">{error}</p>
+        ) : chats.length === 0 ? (
+          <p className="px-6 py-8 text-sm text-[#737373]">No conversations found.</p>
+        ) : chats.map((chat) => (
           <button key={chat.id} onClick={() => onSelect(chat.id)} className={`flex w-full items-center gap-3 px-6 py-2.5 text-left transition hover:bg-[#fafafa] ${activeId === chat.id ? "bg-[#efefef]" : ""}`}>
             <Avatar name={chat.name} color={chat.avatar} online={chat.online} />
             <span className="min-w-0 flex-1">

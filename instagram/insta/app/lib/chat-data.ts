@@ -10,7 +10,7 @@ export type ChatSummary = {
 };
 
 export type Message = {
-  id: number;
+  id: string;
   text: string;
   sentByMe: boolean;
   time: string;
@@ -18,39 +18,85 @@ export type Message = {
 
 export type Conversation = ChatSummary & { messages: Message[] };
 
-export const chats: ChatSummary[] = [
-  { id: "maya", name: "Maya Chen", username: "mayamakes", avatar: "#e6a07b", preview: "That place looks unreal 😍", time: "2m", unread: true, online: true },
-  { id: "alex", name: "Alex Rivera", username: "alex.r", avatar: "#78998a", preview: "You: See you tomorrow!", time: "1h", unread: false, online: true },
-  { id: "noah", name: "Noah Williams", username: "noahw", avatar: "#b28168", preview: "Sent a reel by @filmdaily", time: "3h", unread: false, online: false },
-  { id: "sophia", name: "Sophia Kim", username: "sophiakim", avatar: "#bf8a9e", preview: "Hahaha exactly 😂", time: "5h", unread: false, online: true },
-  { id: "james", name: "James Wilson", username: "james.w", avatar: "#9b836d", preview: "Liked a message", time: "1d", unread: false, online: false },
-  { id: "lena", name: "Lena Ortiz", username: "lenaortiz", avatar: "#7e8cad", preview: "You: I’ll send the photos", time: "2d", unread: false, online: false },
-  { id: "sam", name: "Sam Taylor", username: "sam.t", avatar: "#a57373", preview: "Shared a post", time: "4d", unread: false, online: false },
-];
-
-const messageSets: Record<string, Message[]> = {
-  maya: [
-    { id: 1, text: "Hey! How was your weekend?", sentByMe: false, time: "11:32 AM" },
-    { id: 2, text: "It was amazing! Finally made it up to the coast 🌊", sentByMe: true, time: "11:34 AM" },
-    { id: 3, text: "No way, I’ve been wanting to go forever", sentByMe: false, time: "11:35 AM" },
-    { id: 4, text: "You have to. The sunsets are next level.", sentByMe: true, time: "11:37 AM" },
-    { id: 5, text: "That place looks unreal 😍", sentByMe: false, time: "11:38 AM" },
-  ],
-  alex: [
-    { id: 1, text: "Are we still on for coffee?", sentByMe: false, time: "9:12 AM" },
-    { id: 2, text: "Absolutely — same place at ten?", sentByMe: true, time: "9:15 AM" },
-    { id: 3, text: "Perfect!", sentByMe: false, time: "9:16 AM" },
-    { id: 4, text: "See you tomorrow!", sentByMe: true, time: "9:18 AM" },
-  ],
+export type InstagramUser = {
+  id: string;
+  username: string;
+  full_name: string;
+  profile_pic_url: string | null;
+  is_verified: boolean;
 };
 
-export function getConversation(id: string): Conversation | undefined {
-  const chat = chats.find((item) => item.id === id);
-  if (!chat) return undefined;
+export type InstagramMessage = {
+  id: string;
+  sender_id: string;
+  type: string | null;
+  text: string | null;
+  timestamp: string | null;
+  is_sent_by_viewer: boolean;
+};
+
+export type InstagramChat = {
+  id: string;
+  title: string | null;
+  is_group: boolean;
+  users: InstagramUser[];
+  last_activity_at: string | null;
+  last_message: InstagramMessage | null;
+  messages?: InstagramMessage[];
+};
+
+export type InstagramEnvelope<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+
+function formatRelativeTime(value: string | null): string {
+  if (!value) return "";
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return "";
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return "now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return `${Math.floor(seconds / 86400)}d`;
+}
+
+function formatMessageTime(value: string | null): string {
+  if (!value) return "";
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return "";
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(timestamp);
+}
+
+function messageText(message: InstagramMessage | null): string {
+  if (!message) return "No messages yet";
+  if (message.text) return message.text;
+  return message.type ? `Sent ${message.type.replaceAll("_", " ")}` : "Sent a message";
+}
+
+export function toChatSummary(chat: InstagramChat): ChatSummary {
+  const primaryUser = chat.users[0];
+  const name = chat.title || primaryUser?.full_name || primaryUser?.username || "Instagram user";
+  const preview = messageText(chat.last_message);
   return {
-    ...chat,
-    messages: messageSets[id] ?? [
-      { id: 1, text: chat.preview.replace(/^You: /, ""), sentByMe: chat.preview.startsWith("You:"), time: "Yesterday" },
-    ],
+    id: chat.id,
+    name,
+    username: primaryUser?.username ?? "",
+    avatar: primaryUser?.profile_pic_url ?? "#8a769d",
+    preview: chat.last_message?.is_sent_by_viewer ? `You: ${preview}` : preview,
+    time: formatRelativeTime(chat.last_activity_at),
+    unread: false,
+    online: false,
+  };
+}
+
+export function toConversation(chat: InstagramChat): Conversation {
+  return {
+    ...toChatSummary(chat),
+    messages: (chat.messages ?? []).slice().reverse().map((message) => ({
+      id: message.id,
+      text: messageText(message),
+      sentByMe: message.is_sent_by_viewer,
+      time: formatMessageTime(message.timestamp),
+    })),
   };
 }

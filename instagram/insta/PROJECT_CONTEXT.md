@@ -6,12 +6,19 @@ Last updated: 2026-08-10
 
 This repository contains a single-page Instagram Direct-style inbox. The original Create Next App template page was removed. The intended experience is a polished chat UI backed by dummy API calls, with the data layer designed so a real backend can replace it later.
 
-The app intentionally has two read APIs:
+The app uses Next.js Route Handlers as a backend-for-frontend proxy for the local Flask Instagram service:
 
 1. Load the list of chats.
-2. Load the complete conversation for a selected user.
+2. Load the complete conversation for a selected thread.
+3. Send a text message to a selected thread.
+4. Load an Instagram profile by username.
 
-Sending messages, authentication, persistence, pagination, and real Instagram integration are not implemented yet.
+Instagram authentication and session persistence are handled by the adjacent Flask service. The Next.js server reads its base URL from `INSTAGRAM_API_URL` (default `http://127.0.0.1:5000`).
+
+Local startup requires both services:
+
+1. From `instagram/python/app`, run `python app.py`.
+2. From `instagram/insta`, optionally copy `.env.example` to `.env.local`, then run `npm run dev`.
 
 ## Technology and version constraints
 
@@ -50,7 +57,7 @@ Presentation is split into reusable components:
 - `avatar.tsx`: colored initial avatars and online indicator.
 - `icons.tsx`: local inline SVG icon set; no icon package is required.
 
-Shared API and UI types plus dummy records are in `app/lib/chat-data.ts`. Both Route Handlers and client-facing components import those types, keeping the response shape consistent.
+Shared API/UI types and Flask-to-UI mapping functions are in `app/lib/chat-data.ts`. `app/lib/instagram-api.ts` is the server-only Flask client. Route Handlers keep the Flask address private and translate its response into the existing UI contract.
 
 ## API contracts
 
@@ -107,6 +114,14 @@ Missing IDs return status `404`:
 ```json
 { "message": "Chat not found" }
 ```
+
+### `POST /api/chats/:id`
+
+Accepts `{ "message": "Hello" }` and forwards it to Flask's thread-message endpoint.
+
+### `GET /api/users/:username`
+
+Returns `{ "profile": { ... } }` from Flask's Instagram profile endpoint.
 
 ## Responsive behavior
 
